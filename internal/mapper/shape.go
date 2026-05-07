@@ -50,11 +50,17 @@ func MapShapeRadius(w, h float64, brCorners []float64) ShapeConfig {
 		}
 	}
 
+	// Clamp maxR to half of the shorter side (PPTX max roundRect radius)
+	halfMin := math.Min(w, h) / 2
+	if maxR > halfMin {
+		maxR = halfMin
+	}
+
 	switch count {
 	case 4:
 		cfg.ShapeType = "roundRect"
-		if maxR > 0 {
-			cfg.RectRadius = maxR
+		if maxR > 0 && halfMin > 0 {
+			cfg.RectRadius = maxR / math.Min(w, h) // normalize to 0..0.5 (PPTX range)
 		}
 	case 1:
 		cfg.ShapeType = "round1Rect"
