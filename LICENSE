@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 VEGAVERY Inc.
+Copyright (c) 2026 박정근 (PD) — VEGAVERY RUN®
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+This project was architected and built using NeuronFS
+(https://github.com/rhino-acoustic/NeuronFS) — a filesystem-native governance
+layer for AI agents that ensures deterministic task decomposition, evidence-based
+verification, and zero-hallucination code generation.
