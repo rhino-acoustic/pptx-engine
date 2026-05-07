@@ -77,6 +77,7 @@ type visualBlock struct {
 	Runs     []textRun
 	Level    int     // heading level (1-6) or indent level
 	FontSize float64 // pt
+	Font     string  // font-family
 	Bold     bool
 	Italic   bool
 	Color    string  // hex
@@ -120,6 +121,7 @@ func walkDOM(n *html.Node, styles map[string]string, blocks *[]visualBlock, dept
 				*blocks = append(*blocks, visualBlock{
 					Type: "heading", Text: text, Level: level,
 					FontSize: headingSize(level),
+					Font: extractFontFamily(style),
 					Bold: true,
 					Color: extractColor(style),
 					BgColor: extractBgColor(style),
@@ -136,6 +138,7 @@ func walkDOM(n *html.Node, styles map[string]string, blocks *[]visualBlock, dept
 					blk := visualBlock{
 						Type: "text", Text: text, Runs: runs,
 						FontSize: extractFontSize(style),
+						Font:     extractFontFamily(style),
 						Bold:     strings.Contains(style, "font-weight:bold") || strings.Contains(style, "font-weight:700"),
 						Italic:   strings.Contains(style, "font-style:italic"),
 						Color:    extractColor(style),
@@ -428,6 +431,19 @@ func extractFontSize(style string) float64 {
 	return 0
 }
 
+func extractFontFamily(style string) string {
+	re := regexp.MustCompile(`font-family:\s*([^;]+)`)
+	if m := re.FindStringSubmatch(style); m != nil {
+		fontStr := strings.TrimSpace(m[1])
+		fonts := strings.Split(fontStr, ",")
+		if len(fonts) > 0 {
+			firstFont := strings.Trim(strings.TrimSpace(fonts[0]), `"'`)
+			return firstFont
+		}
+	}
+	return ""
+}
+
 func extractAlign(style string) string {
 	re := regexp.MustCompile(`text-align:\s*(\w+)`)
 	if m := re.FindStringSubmatch(style); m != nil {
@@ -546,6 +562,8 @@ func buildPPTX(stubPath, outPath string, slides [][]visualBlock, htmlPath string
 			case "heading":
 				fs := blk.FontSize
 				if fs == 0 { fs = 24 }
+				fontFace := "Arial"
+				if blk.Font != "" { fontFace = blk.Font }
 				el := compiler.PptxElement{
 					Type: "text",
 					X:    marginIn,
@@ -554,7 +572,7 @@ func buildPPTX(stubPath, outPath string, slides [][]visualBlock, htmlPath string
 					H:    h,
 					Text: blk.Text,
 					TextConfig: &compiler.TextConfig{
-						FontFace: "Freesentation",
+						FontFace: fontFace,
 						FontSize: fs,
 						Bold:     true,
 						Color:    safeColor(blk.Color, "000000"),
@@ -571,6 +589,8 @@ func buildPPTX(stubPath, outPath string, slides [][]visualBlock, htmlPath string
 			case "text":
 				fs := blk.FontSize
 				if fs == 0 { fs = 12 }
+				fontFace := "Arial"
+				if blk.Font != "" { fontFace = blk.Font }
 				el := compiler.PptxElement{
 					Type: "text",
 					X:    marginIn + float64(blk.Level)*0.3,
@@ -579,7 +599,7 @@ func buildPPTX(stubPath, outPath string, slides [][]visualBlock, htmlPath string
 					H:    h,
 					Text: blk.Text,
 					TextConfig: &compiler.TextConfig{
-						FontFace: "Freesentation",
+						FontFace: fontFace,
 						FontSize: fs,
 						Bold:     blk.Bold,
 						Italic:   blk.Italic,
@@ -639,6 +659,7 @@ func buildPPTX(stubPath, outPath string, slides [][]visualBlock, htmlPath string
 						tc := mapper.TableCell{
 							Text: cell, FontSize: 1000, Color: "333333",
 							FillColor: "FFFFFF", Align: "l",
+							FontFace: "Arial",
 						}
 						if ri == 0 {
 							tc.Bold = true
@@ -675,7 +696,7 @@ func buildPPTX(stubPath, outPath string, slides [][]visualBlock, htmlPath string
 			Text: fmt.Sprintf("%d / %d", slideNum, len(slides)),
 			TextConfig: &compiler.TextConfig{
 				FontSize: 9, Color: "999999", Align: "right", Valign: "bottom",
-				FontFace: "Freesentation", Wrap: false,
+				FontFace: "Arial", Wrap: false,
 			},
 		})
 

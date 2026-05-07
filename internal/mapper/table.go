@@ -4,6 +4,7 @@ package mapper
 type TableCell struct {
 	Text      string `json:"text"`
 	FontSize  int    `json:"fontSize,omitempty"`  // hundredths of a point (e.g. 1400 = 14pt)
+	FontFace  string `json:"fontFace,omitempty"`  // e.g. "Consolas"
 	Bold      bool   `json:"bold,omitempty"`
 	Color     string `json:"color,omitempty"`     // 6-char hex text color
 	FillColor string `json:"fillColor,omitempty"` // 6-char hex background

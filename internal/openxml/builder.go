@@ -251,18 +251,22 @@ func writeCustomSlide(zw *zip.Writer, filename string, elements []compiler.PptxE
 				} else {
 					fillXMLStr = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, textColor)
 				}
+				fontFace := "Arial"
+				if el.TextConfig != nil && el.TextConfig.FontFace != "" {
+					fontFace = el.TextConfig.FontFace
+				}
 				parasXML += fmt.Sprintf(`
             <a:p>
               <a:pPr algn="%s"/>
               <a:r>
                 <a:rPr %s dirty="0" smtClean="0" sz="%d" %s %s>
                   %s
-                  <a:latin typeface="Freesentation"/>
-                  <a:ea typeface="Freesentation"/>
+                  <a:latin typeface="%s"/>
+                  <a:ea typeface="%s"/>
                 </a:rPr>
                 <a:t>%s</a:t>
               </a:r>
-            </a:p>`, pptxAlign, langAttr, szVal, boldStr, italicStr, fillXMLStr, escaped)
+            </a:p>`, pptxAlign, langAttr, szVal, boldStr, italicStr, fillXMLStr, fontFace, fontFace, escaped)
 			}
 
 			// Anchor mapping from TextConfig.Valign
@@ -630,11 +634,15 @@ func BuildPPTXSlide(zw *zip.Writer, elements []compiler.PptxElement, filename st
 						gridSpanAttr = fmt.Sprintf(` gridSpan="%d"`, cell.ColSpan)
 					}
 
+					cellFontFace := "Arial"
+					if cell.FontFace != "" {
+						cellFontFace = cell.FontFace
+					}
 					escaped := xmlEscape(cell.Text)
 					cellsXML += fmt.Sprintf(`<a:tc%s>
-  <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="ko-KR" sz="%d"%s dirty="0"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r></a:p></a:txBody>
+  <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="ko-KR" sz="%d"%s dirty="0"><a:solidFill><a:srgbClr val="%s"/></a:solidFill><a:latin typeface="%s"/><a:ea typeface="%s"/></a:rPr><a:t>%s</a:t></a:r></a:p></a:txBody>
   <a:tcPr anchor="ctr"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:tcPr>
-</a:tc>`, gridSpanAttr, cell.FontSize, boldAttr, cell.Color, escaped, cell.FillColor)
+</a:tc>`, gridSpanAttr, cell.FontSize, boldAttr, cell.Color, cellFontFace, cellFontFace, escaped, cell.FillColor)
 				}
 				rowsXML += fmt.Sprintf(`<a:tr h="%d">%s</a:tr>`, rh, cellsXML)
 			}
