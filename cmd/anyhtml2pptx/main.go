@@ -591,6 +591,16 @@ func buildPPTX(stubPath, outPath string, slides [][]visualBlock, htmlPath string
 				if fs == 0 { fs = 12 }
 				fontFace := "Arial"
 				if blk.Font != "" { fontFace = blk.Font }
+				
+				var cRuns []compiler.TextRun
+				for _, r := range blk.Runs {
+					cr := compiler.TextRun{
+						Text: r.Text, Bold: r.Bold, Italic: r.Italic, Underline: r.Underline,
+						Color: safeColor(r.Color, ""), FontFace: r.Font, FontSize: r.FontSize, Link: r.Link,
+					}
+					cRuns = append(cRuns, cr)
+				}
+
 				el := compiler.PptxElement{
 					Type: "text",
 					X:    marginIn + float64(blk.Level)*0.3,
@@ -607,6 +617,7 @@ func buildPPTX(stubPath, outPath string, slides [][]visualBlock, htmlPath string
 						Align:    safeAlign(blk.Align),
 						Valign:   "top",
 						Wrap:     true,
+						TextRuns: cRuns,
 					},
 				}
 				if blk.BgColor != "" {
@@ -792,6 +803,7 @@ func updateCT(zw *zip.Writer, count int, stub *zip.ReadCloser) {
 			`<Default Extension="jpeg" ContentType="image/jpeg"/>`,
 			`<Default Extension="jpg" ContentType="image/jpeg"/>`,
 			`<Default Extension="gif" ContentType="image/gif"/>`,
+			`<Default Extension="svg" ContentType="image/svg+xml"/>`,
 		}
 		for _, d := range defaults {
 			if !strings.Contains(c, d) {

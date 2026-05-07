@@ -242,6 +242,7 @@ func updateContentTypes(zw *zip.Writer, slideCount int, stub *zip.ReadCloser) {
 				`<Default Extension="jpeg" ContentType="image/jpeg"/>`,
 				`<Default Extension="jpg" ContentType="image/jpeg"/>`,
 				`<Default Extension="gif" ContentType="image/gif"/>`,
+				`<Default Extension="svg" ContentType="image/svg+xml"/>`,
 			}
 			for _, d := range defaults {
 				if !strings.Contains(content, d) {

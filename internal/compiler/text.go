@@ -8,6 +8,18 @@ import (
 )
 
 // TextConfig represents PPTX text formatting.
+// TextRun represents an inline rich text segment (e.g. <b>, <i>, <span>).
+type TextRun struct {
+	Text      string  `json:"text"`
+	FontFace  string  `json:"fontFace,omitempty"`
+	FontSize  float64 `json:"fontSize,omitempty"`
+	Color     string  `json:"color,omitempty"`
+	Bold      bool    `json:"bold,omitempty"`
+	Italic    bool    `json:"italic,omitempty"`
+	Underline bool    `json:"underline,omitempty"`
+	Link      string  `json:"link,omitempty"`
+}
+
 type TextConfig struct {
 	FontFace      string    `json:"fontFace"`
 	FontSize      float64   `json:"fontSize"`
@@ -21,6 +33,7 @@ type TextConfig struct {
 	LetterSpacing float64   `json:"letterSpacing,omitempty"`
 	Margin        []float64 `json:"margin,omitempty"`
 	Wrap          bool      `json:"wrap"`
+	TextRuns      []TextRun `json:"textRuns,omitempty"` // For inline rich text
 }
 
 // MapTextFormatting maps CSS typography to PPTX TextConfig.

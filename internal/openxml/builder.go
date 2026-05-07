@@ -241,21 +241,53 @@ func writeCustomSlide(zw *zip.Writer, filename string, elements []compiler.PptxE
 				textAlphaXML = fmt.Sprintf(`<a:alpha val="%d"/>`, alphaVal)
 			}
 
+			fillXMLStr := ""
+			if textAlphaXML != "" {
+				fillXMLStr = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s">%s</a:srgbClr></a:solidFill>`, textColor, textAlphaXML)
+			} else {
+				fillXMLStr = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, textColor)
+			}
+			fontFace := "Arial"
+			if el.TextConfig != nil && el.TextConfig.FontFace != "" {
+				fontFace = el.TextConfig.FontFace
+			}
+
 			parasXML := ""
-			for _, line := range lines {
-				escaped := escapeXML(strings.TrimSpace(line))
-				if escaped == "" { continue }
-				fillXMLStr := ""
-				if textAlphaXML != "" {
-					fillXMLStr = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s">%s</a:srgbClr></a:solidFill>`, textColor, textAlphaXML)
-				} else {
-					fillXMLStr = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, textColor)
-				}
-				fontFace := "Arial"
-				if el.TextConfig != nil && el.TextConfig.FontFace != "" {
-					fontFace = el.TextConfig.FontFace
-				}
+			if el.TextConfig != nil && len(el.TextConfig.TextRuns) > 0 {
 				parasXML += fmt.Sprintf(`
+            <a:p>
+              <a:pPr algn="%s"/>`, pptxAlign)
+				for _, run := range el.TextConfig.TextRuns {
+					escaped := escapeXML(run.Text)
+					if escaped == "" { continue }
+					rSzVal := szVal
+					if run.FontSize > 0 { rSzVal = int(run.FontSize * 100) }
+					rBoldStr := boldStr
+					if run.Bold { rBoldStr = `b="1"` }
+					rItalicStr := italicStr
+					if run.Italic { rItalicStr = `i="1"` }
+					rFontFace := fontFace
+					if run.FontFace != "" { rFontFace = run.FontFace }
+					rFillXMLStr := fillXMLStr
+					if run.Color != "" { rFillXMLStr = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, run.Color) }
+					
+					parasXML += fmt.Sprintf(`
+              <a:r>
+                <a:rPr %s dirty="0" smtClean="0" sz="%d" %s %s>
+                  %s
+                  <a:latin typeface="%s"/>
+                  <a:ea typeface="%s"/>
+                </a:rPr>
+                <a:t>%s</a:t>
+              </a:r>`, langAttr, rSzVal, rBoldStr, rItalicStr, rFillXMLStr, rFontFace, rFontFace, escaped)
+				}
+				parasXML += `
+            </a:p>`
+			} else {
+				for _, line := range lines {
+					escaped := escapeXML(strings.TrimSpace(line))
+					if escaped == "" { continue }
+					parasXML += fmt.Sprintf(`
             <a:p>
               <a:pPr algn="%s"/>
               <a:r>
@@ -267,6 +299,7 @@ func writeCustomSlide(zw *zip.Writer, filename string, elements []compiler.PptxE
                 <a:t>%s</a:t>
               </a:r>
             </a:p>`, pptxAlign, langAttr, szVal, boldStr, italicStr, fillXMLStr, fontFace, fontFace, escaped)
+				}
 			}
 
 			// Anchor mapping from TextConfig.Valign
@@ -294,6 +327,40 @@ func writeCustomSlide(zw *zip.Writer, filename string, elements []compiler.PptxE
 				wrapAttr = "none"
 			}
 
+			// Box background and border
+			boxFillXML := "<a:noFill/>"
+			if el.Fill != nil {
+				if c, ok := el.Fill["color"].(string); ok && len(c) == 6 {
+					transparencyStr := ""
+					if t, ok := el.Fill["transparency"].(float64); ok && t > 0 {
+						alpha := int64((1.0 - t) * 100000)
+						transparencyStr = fmt.Sprintf(`<a:alpha val="%d"/>`, alpha)
+					}
+					boxFillXML = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s">%s</a:srgbClr></a:solidFill>`, c, transparencyStr)
+				}
+			}
+
+			shapeType := "rect"
+			avLstXML := "<a:avLst/>"
+			if el.Shape.ShapeType == "roundRect" {
+				shapeType = "roundRect"
+				if el.Shape.RectRadius > 0 {
+					minDim := el.W
+					if el.H < minDim { minDim = el.H }
+					if minDim > 0 {
+						adjVal := int64(el.Shape.RectRadius / minDim * 100000)
+						if adjVal > 50000 { adjVal = 50000 }
+						avLstXML = fmt.Sprintf(`<a:avLst><a:gd name="adj" fmla="val %d"/></a:avLst>`, adjVal)
+					}
+				}
+			}
+
+			borderXML := ""
+			if el.Border != nil && el.Border.Width > 0 && el.Border.Color != "" {
+				bwEMU := int64(el.Border.Width * 12700)
+				borderXML = fmt.Sprintf(`<a:ln w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:ln>`, bwEMU, el.Border.Color)
+			}
+
 			textXML := fmt.Sprintf(`
       <p:sp>
         <p:nvSpPr>
@@ -306,8 +373,9 @@ func writeCustomSlide(zw *zip.Writer, filename string, elements []compiler.PptxE
             <a:off x="%d" y="%d"/>
             <a:ext cx="%d" cy="%d"/>
           </a:xfrm>
-          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
-          <a:noFill/>
+          <a:prstGeom prst="%s">%s</a:prstGeom>
+          %s
+          %s
           %s
         </p:spPr>
         <p:txBody>
@@ -316,7 +384,7 @@ func writeCustomSlide(zw *zip.Writer, filename string, elements []compiler.PptxE
           </a:bodyPr>
           <a:lstStyle/>%s
         </p:txBody>
-      </p:sp>`, idCounter, idCounter, rotStr, emuX, emuY, emuW, emuH, shadowXML, wrapAttr, anchorStr, parasXML)
+      </p:sp>`, idCounter, idCounter, rotStr, emuX, emuY, emuW, emuH, shapeType, avLstXML, boxFillXML, borderXML, shadowXML, wrapAttr, anchorStr, parasXML)
 			slideXML += textXML
 		}
 		idCounter++
@@ -537,6 +605,92 @@ func BuildPPTXSlide(zw *zip.Writer, elements []compiler.PptxElement, filename st
 				}
 			}
 
+			parasXML := ""
+			if el.TextConfig != nil && len(el.TextConfig.TextRuns) > 0 {
+				parasXML += fmt.Sprintf(`
+          <a:p>
+            <a:pPr>%s</a:pPr>`, lineSpacingXML)
+				for _, run := range el.TextConfig.TextRuns {
+					rEscaped := xmlEscape(run.Text)
+					if rEscaped == "" { continue }
+					rSzVal := szVal
+					if run.FontSize > 0 { rSzVal = int(run.FontSize * 100) }
+					rBoldStr := boldStr
+					if run.Bold { rBoldStr = `b="1"` }
+					rItalicStr := italicStr
+					if run.Italic { rItalicStr = `i="1"` }
+					rFontFace := fontFace
+					if run.FontFace != "" { rFontFace = run.FontFace }
+					rTextColor := textColor
+					if run.Color != "" { rTextColor = run.Color }
+					
+					parasXML += fmt.Sprintf(`
+            <a:r>
+              <a:rPr %s dirty="0" sz="%d" %s %s>
+                <a:solidFill><a:srgbClr val="%s"/></a:solidFill>
+                <a:latin typeface="%s"/>
+                <a:ea typeface="%s"/>
+              </a:rPr>
+              <a:t>%s</a:t>
+            </a:r>`, langAttr, rSzVal, rBoldStr, rItalicStr, rTextColor, rFontFace, rFontFace, rEscaped)
+				}
+				parasXML += `
+          </a:p>`
+			} else {
+				parasXML = fmt.Sprintf(`
+          <a:p>
+            <a:pPr>%s</a:pPr>
+            <a:r>
+              <a:rPr %s dirty="0" sz="%d" %s %s>
+                <a:solidFill><a:srgbClr val="%s"/></a:solidFill>
+                <a:latin typeface="%s"/>
+                <a:ea typeface="%s"/>
+              </a:rPr>
+              <a:t>%s</a:t>
+            </a:r>
+          </a:p>`, lineSpacingXML, langAttr, szVal, boldStr, italicStr, textColor, fontFace, fontFace, escaped)
+			}
+
+			// Box background and border
+			boxFillXML := "<a:noFill/>"
+			if el.Fill != nil {
+				if c, ok := el.Fill["color"].(string); ok && len(c) == 6 {
+					transparencyStr := ""
+					if t, ok := el.Fill["transparency"].(float64); ok && t > 0 {
+						alpha := int64((1.0 - t) * 100000)
+						transparencyStr = fmt.Sprintf(`<a:alpha val="%d"/>`, alpha)
+					}
+					boxFillXML = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s">%s</a:srgbClr></a:solidFill>`, c, transparencyStr)
+				}
+			}
+
+			shapeType := el.Shape.ShapeType
+			if shapeType == "" { shapeType = "rect" }
+			avLstXML := "<a:avLst/>"
+			if shapeType == "roundRect" && el.Shape.RectRadius > 0 {
+				avVal := int(el.Shape.RectRadius * 100000)
+				avLstXML = fmt.Sprintf(`<a:avLst><a:gd name="adj" fmla="val %d"/></a:avLst>`, avVal)
+			}
+
+			borderXML := ""
+			if el.Border != nil && el.Border.Color != "" {
+				bw := int(el.Border.Width * 12700)
+				dashAttr := ""
+				if el.Border.DashType != "" {
+					dashAttr = fmt.Sprintf(` prstDash="%s"`, el.Border.DashType)
+				}
+				borderXML = fmt.Sprintf(`<a:ln w="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:ln>`, bw, dashAttr, el.Border.Color)
+			}
+
+			// Shadow XML for text shapes
+			shadowXML := ""
+			if el.Shadow != nil {
+				blurEMU := el.Shadow.Blur * 12700
+				offEMU := el.Shadow.Offset * 12700
+				alphaVal := int(el.Shadow.Opacity * 100000)
+				shadowXML = fmt.Sprintf(`<a:effectLst><a:outerShdw blurRad="%d" dist="%d" dir="%d"><a:srgbClr val="%s"><a:alpha val="%d"/></a:srgbClr></a:outerShdw></a:effectLst>`, blurEMU, offEMU, el.Shadow.Direction, el.Shadow.Color, alphaVal)
+			}
+
 			textXML := fmt.Sprintf(`
       <p:sp>
         <p:nvSpPr>
@@ -549,28 +703,16 @@ func BuildPPTXSlide(zw *zip.Writer, elements []compiler.PptxElement, filename st
             <a:off x="%d" y="%d"/>
             <a:ext cx="%d" cy="%d"/>
           </a:xfrm>
-          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
-          <a:noFill/>
+          <a:prstGeom prst="%s">%s</a:prstGeom>
+          %s
+          %s
+          %s
         </p:spPr>
         <p:txBody>
           <a:bodyPr %s rtlCol="0" anchor="ctr" lIns="0" tIns="0" rIns="0" bIns="0"/>
-          <a:lstStyle/>
-          <a:p>
-            <a:pPr>%s</a:pPr>
-            <a:r>
-              <a:rPr %s dirty="0" sz="%d" %s %s>
-                <a:solidFill><a:srgbClr val="%s"/></a:solidFill>
-                <a:latin typeface="%s"/>
-                <a:ea typeface="%s"/>
-              </a:rPr>
-              <a:t>%s</a:t>
-            </a:r>
-          </a:p>
+          <a:lstStyle/>%s
         </p:txBody>
-      </p:sp>`, idCounter, idCounter, rotStr, emuX, emuY, emuW, emuH,
-				wrapAttr, lineSpacingXML,
-				langAttr, szVal, boldStr, italicStr, textColor,
-				fontFace, fontFace, escaped)
+      </p:sp>`, idCounter, idCounter, rotStr, emuX, emuY, emuW, emuH, shapeType, avLstXML, boxFillXML, borderXML, shadowXML, wrapAttr, parasXML)
 			slideXML += textXML
 
 		} else if el.Type == "table" && el.Table != nil && len(el.Table.Rows) > 0 {
