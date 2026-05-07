@@ -17,11 +17,12 @@ type BorderConfig struct {
 
 // ShadowConfig represents PPTX shadow options.
 type ShadowConfig struct {
-	Type    string  `json:"type"`
-	Blur    int     `json:"blur"`
-	Offset  int     `json:"offset"`
-	Color   string  `json:"color"`
-	Opacity float64 `json:"opacity"`
+	Type      string  `json:"type"`
+	Blur      int     `json:"blur"`
+	Offset    int     `json:"offset"`
+	Direction int     `json:"direction"` // 0-21600000 (OpenXML 60000ths of a degree)
+	Color     string  `json:"color"`
+	Opacity   float64 `json:"opacity"`
 }
 
 // MapBorder maps CSS border properties to PPTX line configuration.
@@ -56,11 +57,12 @@ func MapShadow(hasShadow bool) *ShadowConfig {
 	}
 	// Default soft outer shadow for UI elements
 	return &ShadowConfig{
-		Type:    "outer",
-		Blur:    4,
-		Offset:  2,
-		Color:   "000000",
-		Opacity: 0.15,
+		Type:      "outer",
+		Blur:      4,
+		Offset:    2,
+		Direction: 2700000, // 45 degrees
+		Color:     "000000",
+		Opacity:   0.15,
 	}
 }
 
@@ -88,6 +90,14 @@ func MapShadowFromCSS(boxShadow string) *ShadowConfig {
 
 	// Combined offset (diagonal distance)
 	offset := math.Sqrt(offsetX*offsetX + offsetY*offsetY)
+	
+	// Calculate direction in degrees (0 to 360), mapping atan2(y, x) to PPTX EMU (1 deg = 60000 EMU)
+	dirRad := math.Atan2(offsetY, offsetX)
+	dirDeg := dirRad * 180.0 / math.Pi
+	if dirDeg < 0 {
+		dirDeg += 360.0
+	}
+	direction := int(math.Round(dirDeg * 60000.0))
 
 	// Extract color and opacity
 	color := "000000"
@@ -99,11 +109,12 @@ func MapShadowFromCSS(boxShadow string) *ShadowConfig {
 	}
 
 	return &ShadowConfig{
-		Type:    "outer",
-		Blur:    int(blur),
-		Offset:  int(offset),
-		Color:   color,
-		Opacity: opacity,
+		Type:      "outer",
+		Blur:      int(blur),
+		Offset:    int(offset),
+		Direction: direction,
+		Color:     color,
+		Opacity:   opacity,
 	}
 }
 

@@ -236,6 +236,19 @@ func updateContentTypes(zw *zip.Writer, slideCount int, stub *zip.ReadCloser) {
 			src.Close()
 			content := string(data)
 
+			// Add default image content types if missing
+			defaults := []string{
+				`<Default Extension="png" ContentType="image/png"/>`,
+				`<Default Extension="jpeg" ContentType="image/jpeg"/>`,
+				`<Default Extension="jpg" ContentType="image/jpeg"/>`,
+				`<Default Extension="gif" ContentType="image/gif"/>`,
+			}
+			for _, d := range defaults {
+				if !strings.Contains(content, d) {
+					content = strings.Replace(content, "</Types>", d+"\n</Types>", 1)
+				}
+			}
+
 			for i := 1; i <= slideCount; i++ {
 				override := fmt.Sprintf(`<Override PartName="/ppt/slides/slide%d.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`, i)
 				if !strings.Contains(content, override) {

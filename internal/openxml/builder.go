@@ -174,7 +174,7 @@ func writeCustomSlide(zw *zip.Writer, filename string, elements []compiler.PptxE
 				blurEMU := el.Shadow.Blur * 12700
 				offEMU := el.Shadow.Offset * 12700
 				alphaVal := int(el.Shadow.Opacity * 100000)
-				shapeShadowXML = fmt.Sprintf(`<a:effectLst><a:outerShdw blurRad="%d" dist="%d" dir="2700000" algn="tl" rotWithShape="0"><a:srgbClr val="%s"><a:alpha val="%d"/></a:srgbClr></a:outerShdw></a:effectLst>`, blurEMU, offEMU, el.Shadow.Color, alphaVal)
+				shapeShadowXML = fmt.Sprintf(`<a:effectLst><a:outerShdw blurRad="%d" dist="%d" dir="%d" algn="tl" rotWithShape="0"><a:srgbClr val="%s"><a:alpha val="%d"/></a:srgbClr></a:outerShdw></a:effectLst>`, blurEMU, offEMU, el.Shadow.Direction, el.Shadow.Color, alphaVal)
 			}
 
 			shapeXML := fmt.Sprintf(`
@@ -281,7 +281,7 @@ func writeCustomSlide(zw *zip.Writer, filename string, elements []compiler.PptxE
 				blurEMU := el.Shadow.Blur * 12700
 				offEMU := el.Shadow.Offset * 12700
 				alphaVal := int(el.Shadow.Opacity * 100000)
-				shadowXML = fmt.Sprintf(`<a:effectLst><a:outerShdw blurRad="%d" dist="%d" dir="2700000" algn="tl" rotWithShape="0"><a:srgbClr val="%s"><a:alpha val="%d"/></a:srgbClr></a:outerShdw></a:effectLst>`, blurEMU, offEMU, el.Shadow.Color, alphaVal)
+				shadowXML = fmt.Sprintf(`<a:effectLst><a:outerShdw blurRad="%d" dist="%d" dir="%d" algn="tl" rotWithShape="0"><a:srgbClr val="%s"><a:alpha val="%d"/></a:srgbClr></a:outerShdw></a:effectLst>`, blurEMU, offEMU, el.Shadow.Direction, el.Shadow.Color, alphaVal)
 			}
 
 			// Wrap mapping
@@ -452,7 +452,7 @@ func BuildPPTXSlide(zw *zip.Writer, elements []compiler.PptxElement, filename st
 				blurEMU := el.Shadow.Blur * 12700
 				offEMU := el.Shadow.Offset * 12700
 				alphaVal := int(el.Shadow.Opacity * 100000)
-				shadowXML = fmt.Sprintf(`<a:effectLst><a:outerShdw blurRad="%d" dist="%d" dir="5400000"><a:srgbClr val="%s"><a:alpha val="%d"/></a:srgbClr></a:outerShdw></a:effectLst>`, blurEMU, offEMU, el.Shadow.Color, alphaVal)
+				shadowXML = fmt.Sprintf(`<a:effectLst><a:outerShdw blurRad="%d" dist="%d" dir="%d"><a:srgbClr val="%s"><a:alpha val="%d"/></a:srgbClr></a:outerShdw></a:effectLst>`, blurEMU, offEMU, el.Shadow.Direction, el.Shadow.Color, alphaVal)
 			}
 
 			// Flip attributes
